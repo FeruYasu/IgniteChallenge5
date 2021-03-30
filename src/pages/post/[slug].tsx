@@ -1,4 +1,10 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
+import Head from 'next/head';
+import { RichText } from 'prismic-dom';
+import { useRouter } from 'next/router';
+import Prismic from '@prismicio/client';
+import { useEffect, useState } from 'react';
+import Header from '../../components/Header';
 
 import { getPrismicClient } from '../../services/prismic';
 
@@ -26,20 +32,105 @@ interface PostProps {
   post: Post;
 }
 
-// export default function Post() {
-//   // TODO
-// }
+export default function Post({ post }: PostProps) {
+  const router = useRouter();
 
-// export const getStaticPaths = async () => {
-//   const prismic = getPrismicClient();
-//   const posts = await prismic.query(TODO);
+  const [formatedDate, SetFormatedDate] = useState('');
 
-//   // TODO
-// };
+  if (router.isFallback) {
+    return (
+      <>
+        <Header />
+        <div>Carregando...</div>
+      </>
+    );
+  }
 
-// export const getStaticProps = async context => {
-//   const prismic = getPrismicClient();
-//   const response = await prismic.getByUID(TODO);
+  useEffect(() => {
+    const data = new Date(post.first_publication_date).toLocaleDateString(
+      'pt-BR',
+      {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }
+    );
 
-//   // TODO
-// };
+    const newData = data.replace('de', '').replace('de', '');
+    const dataToArray = newData.split(' ');
+    const month = dataToArray[2].slice(0, 3);
+    dataToArray[2] = month;
+    const newDate = `${dataToArray[0]} ${month} ${dataToArray[4]}`;
+
+    SetFormatedDate(newDate);
+  }, [post]);
+
+  return (
+    <>
+      <Head>
+        <title>{post.data.title} | IgNews</title>
+      </Head>
+
+      <main className={styles.container}>
+        <Header />
+
+        <article className={styles.post}>
+          <h1>{post.data.title}</h1>
+          <time>{formatedDate}</time>
+          <p>{post.data.author}</p>
+          <p>4 min</p>
+
+          {post.data.content.map(postContent => (
+            <div className={styles.postContent} key={postContent.heading}>
+              <h1>{postContent.heading}</h1>
+
+              <div
+                className={`${styles.postContent} ${styles.previewContent}`}
+                dangerouslySetInnerHTML={{
+                  __html: RichText.asHtml(postContent.body),
+                }}
+              />
+            </div>
+          ))}
+        </article>
+      </main>
+    </>
+  );
+}
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const prismic = getPrismicClient();
+
+  const { results } = await prismic.query(
+    [Prismic.predicates.at('document.type', 'posts')],
+    {
+      fetch: ['posts.title', 'posts.author', 'posts.subtitle', 'posts.content'],
+    }
+  );
+
+  const paths = results.map(post => {
+    return {
+      params: {
+        slug: post.uid,
+      },
+    };
+  });
+
+  return {
+    paths,
+    fallback: 'blocking',
+  };
+};
+
+export const getStaticProps: GetStaticProps = async ({ params }) => {
+  const prismic = getPrismicClient();
+  const { slug } = params;
+
+  const response = await prismic.getByUID('posts', String(slug), {});
+  return {
+    props: {
+      post: response,
+    },
+    revalidate: 3600,
+  };
+};
