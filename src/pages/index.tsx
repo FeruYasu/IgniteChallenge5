@@ -4,6 +4,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Prismic from '@prismicio/client';
 import { useCallback, useState } from 'react';
+import { FiCalendar, FiUser } from 'react-icons/fi';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { getPrismicClient } from '../services/prismic';
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -63,9 +66,11 @@ export default function Home({ postsPagination }: HomeProps) {
 
                 <div>
                   <div>
+                    <FiCalendar />
                     <time>{post.first_publication_date}</time>
                   </div>
                   <div>
+                    <FiUser />
                     <p>{post.data.author}</p>
                   </div>
                 </div>
@@ -94,20 +99,14 @@ export const getStaticProps: GetStaticProps = async () => {
   );
 
   results.map(result => {
-    const data = new Date(result.first_publication_date).toLocaleDateString(
-      'pt-BR',
+    const formatedData = format(
+      new Date(result.first_publication_date),
+      `dd LLL yyyy`,
       {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
+        locale: ptBR,
       }
     );
 
-    const newData = data.replace('de', '').replace('de', '');
-    const dataToArray = newData.split(' ');
-    const month = dataToArray[2].slice(0, 3);
-    dataToArray[2] = month;
-    const formatedData = `${dataToArray[0]} ${month} ${dataToArray[4]}`;
     result.first_publication_date = formatedData;
 
     return result;

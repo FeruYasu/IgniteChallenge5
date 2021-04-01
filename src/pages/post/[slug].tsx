@@ -4,6 +4,8 @@ import { RichText } from 'prismic-dom';
 import { useRouter } from 'next/router';
 import Prismic from '@prismicio/client';
 import { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import Header from '../../components/Header';
 
 import { getPrismicClient } from '../../services/prismic';
@@ -47,22 +49,15 @@ export default function Post({ post }: PostProps) {
   }
 
   useEffect(() => {
-    const data = new Date(post.first_publication_date).toLocaleDateString(
-      'pt-BR',
+    const formatedData = format(
+      new Date(post.first_publication_date),
+      `dd LLL yyyy`,
       {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
+        locale: ptBR,
       }
     );
 
-    const newData = data.replace('de', '').replace('de', '');
-    const dataToArray = newData.split(' ');
-    const month = dataToArray[2].slice(0, 3);
-    dataToArray[2] = month;
-    const newDate = `${dataToArray[0]} ${month} ${dataToArray[4]}`;
-
-    SetFormatedDate(newDate);
+    SetFormatedDate(formatedData);
   }, [post]);
 
   return (
